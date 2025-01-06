@@ -19,6 +19,7 @@ main(int argc, char *argv[])
     exit(1);
   }
   
+  // argv[2] and onwards is the command to run, i.e. grep hello README
   for(i = 2; i < argc && i < MAXARG; i++){
     nargv[i-2] = argv[i];
   }
