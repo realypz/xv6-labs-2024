@@ -190,6 +190,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
 // Optionally free the physical memory.
+// NOTE: The content page of lower va is freed before the content page of higher va.
 void
 uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 {
@@ -300,6 +301,9 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
+// NOTE: The content page is NOT freed.
+//       The pagetable of lower va is freed before the pagetable of higher va.
+//       The child pagetable is freed before the parent pagetable.
 void
 freewalk(pagetable_t pagetable)
 {
@@ -324,7 +328,7 @@ void
 uvmfree(pagetable_t pagetable, uint64 sz)
 {
   if(sz > 0)
-    uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
+    uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1); // do_free = 1
   freewalk(pagetable);
 }
 

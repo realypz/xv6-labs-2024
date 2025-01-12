@@ -438,25 +438,34 @@ sys_exec(void)
   int i;
   uint64 uargv, uarg;
 
-  argaddr(1, &uargv);
+  argaddr(1, &uargv); // p->trapframe->a1, store the user space va to `char *newargv[] = { "secret", secret, 0 };`.
+
+  // Copy the exetuable name "secret" to `path`.
   if(argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
+
+  // Set the argv array with zeros.
   memset(argv, 0, sizeof(argv));
   for(i=0;; i++){
     if(i >= NELEM(argv)){
       goto bad;
     }
+    // fetchaddr below only copies the value of `newargv[i]`, which is a pointer to the string literal.
+    // uarg stores the value of newargv[i], which is a pointer to the string.
     if(fetchaddr(uargv+sizeof(uint64)*i, (uint64*)&uarg) < 0){
       goto bad;
     }
     if(uarg == 0){
+      // NOTE: 0 means the last argument, e.g. char *newargv[] = { "secret", secret, 0 };
       argv[i] = 0;
       break;
     }
+    // NOTE: Allocate per page for each string literal in the newargv array.
     argv[i] = kalloc();
     if(argv[i] == 0)
       goto bad;
+    // NOTE: Copy the string literal to the allocated page.
     if(fetchstr(uarg, argv[i], PGSIZE) < 0)
       goto bad;
   }
@@ -464,6 +473,7 @@ sys_exec(void)
   int ret = exec(path, argv);
 
   for(i = 0; i < NELEM(argv) && argv[i] != 0; i++)
+    // Free the pages created by argv[i] = kalloc();
     kfree(argv[i]);
 
   return ret;

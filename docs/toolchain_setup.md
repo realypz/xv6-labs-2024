@@ -1,4 +1,4 @@
-# Lab Syscall Readme
+# Toolchain Setup
 
 ## Setup from a fresh Ubuntu-24.04 LTS AMD64
 

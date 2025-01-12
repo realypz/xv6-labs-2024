@@ -106,6 +106,7 @@ allocpid()
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
 // If there are no free procs, or a memory allocation fails, return 0.
+// NOTE: This function is only called by `void userinit(void)` and `int fork(void)`.
 static struct proc*
 allocproc(void)
 {
@@ -126,6 +127,7 @@ found:
   p->state = USED;
 
   // Allocate a trapframe page.
+  // LAB_SYSCALL: Allocate 1 page for trapframe of this user process.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
     release(&p->lock);
@@ -143,7 +145,7 @@ found:
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
-  p->context.ra = (uint64)forkret;
+  p->context.ra = (uint64)forkret; // NOTE: `ra` register stores the caller saved return address.
   p->context.sp = p->kstack + PGSIZE;
 
   return p;
@@ -179,6 +181,8 @@ proc_pagetable(struct proc *p)
   pagetable_t pagetable;
 
   // An empty page table.
+  // LAB_SYSCALL: Create one empty user page table.
+  //              The returned value is the root (L2) page table for this process.
   pagetable = uvmcreate();
   if(pagetable == 0)
     return 0;
@@ -210,8 +214,8 @@ proc_pagetable(struct proc *p)
 void
 proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
-  uvmunmap(pagetable, TRAMPOLINE, 1, 0);
-  uvmunmap(pagetable, TRAPFRAME, 1, 0);
+  uvmunmap(pagetable, TRAMPOLINE, 1, 0); // do_free = 0, means the content page is not cleared.
+  uvmunmap(pagetable, TRAPFRAME, 1, 0); // do_free = 0, means the content page is not cleared.
   uvmfree(pagetable, sz);
 }
 
@@ -299,7 +303,7 @@ fork(void)
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
-  // Cause fork to return 0 in the child.
+  // Cause fork in user.h to return 0 in the child.
   np->trapframe->a0 = 0;
 
   np->trace_mask = p->trace_mask;
