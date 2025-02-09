@@ -4,7 +4,7 @@
 #include "kernel/riscv.h"
 #include "user/user.h"
 
-#define N (8 * (1 << 20))
+#define N (8 * (1 << 20)) // 4 superpages
 
 void print_pgtbl();
 void print_kpgtbl();
@@ -90,7 +90,8 @@ supercheck(uint64 s)
   pte_t last_pte = 0;
 
   for (uint64 p = s;  p < s + 512 * PGSIZE; p += PGSIZE) {
-    pte_t pte = (pte_t) pgpte((void *) p);
+    pte_t pte = (pte_t) pgpte((void *) p); // The user stub of pgpte() is used here.
+    // printf("supercheck: p 0x%lx pte 0x%lx\n", p, pte);
     if(pte == 0)
       err("no pte");
     if ((uint64) last_pte != 0 && pte != last_pte) {
@@ -123,7 +124,6 @@ superpg_test()
   char *end = sbrk(N);
   if (end == 0 || end == (char*)0xffffffffffffffff)
     err("sbrk failed");
-  
   uint64 s = SUPERPGROUNDUP((uint64) end);
   supercheck(s);
   if((pid = fork()) < 0) {
